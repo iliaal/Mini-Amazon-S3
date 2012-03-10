@@ -1,0 +1,14 @@
+The Mini Amazon S3 class provides a quick & small interface to some basic S3
+commands over the REST interface.
+
+The class requires PHP 5.0+ with cURL, SimpleXML and Fileinfo extensions
+enabled.
+
+The class provides methods for the following functions:
+	- storeFile() - save a file from local disk
+	- storeString() - create a file on S3 based on a string of data
+	- getFile() - retrieve a file from S3
+	- createBucket() - create a bucket
+	- deleteBucket() - delete a bucket
+	- deleteFile() - delete a file
+	- existsBucket() - check if a bucket already exists
