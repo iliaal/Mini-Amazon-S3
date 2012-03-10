@@ -48,30 +48,74 @@ class AmazonS3 {
 	private $amz_headers = array();
 	private $error = array();
 
+	/**
+	 * Initialize class
+	 *
+	 * @param string $public_key Public key
+	 * @param string $secret_key Secret key
+	 * @param string $use_ssl Whether or not SSL should be used for communication with S3
+	 * @return void
+	 */
 	public function __construct($public_key, $secret_key, $use_ssl = 1) {
 		$this->use_ssl = $use_ssl;
 		$this->secret_key = $secret_key;
 		$this->public_key = $public_key;
 	}
 
+	/**
+	 * Change S3 hostname
+	 *
+	 * @param string $host Alternate S3 hostname
+	 * @return void
+	 */
 	public function setS3Host($host) {
 		$this->s3_host = $host;
 	}
 
+	/**
+	 * Returns error state
+	 *
+	 * @return array
+	 */
 	public function getErrorInfo() {
 		return $this->error;
 	}
 
+	/**
+	 * Delete a file
+	 *
+	 * @param string $filename name of the file to delete
+	 * @param string $bucket name of the bucket where the file is located
+	 * @return boolean
+	 */
 	public function deleteFile($filename, $bucket) {
 		$this->cleanState();
 		return $this->sendRequest('DELETE', $this->buildURL($bucket, $filename));
 	}
 
+	/**
+	 * Delete a bucket
+	 *
+	 * @param string $name Bucket name
+	 * @return boolean
+	 */
 	public function deleteBucket($bucket) {
 		$this->cleanState();
 		return $this->sendRequest('DELETE', $this->buildURL($bucket));
 	}
 
+	/**
+	 * Create a file on S3 on a basis of a supplied file
+	 *
+	 * @param string $filename filename to upload
+	 * @param string $bucket bucket name
+	 * @param string $s3_name the name to assign the file on S3
+	 * @param string $mime mime type of the file
+	 * @param string $acl file access permissions
+	 * @param string $storage file storage mode
+	 * @param boolean $encrypt whether or not the file is to be stored in encrypted form
+	 * @return boolean
+	 */
 	public function storeFile($filename, $bucket, $s3_name, $mime = null, $acl = self::ACL_PRIVATE, $storage = self::STORAGE_CLASS_STANDARD, $encrypt = 1) {
 		if (!file_exists($filename) || !is_readable($filename)) {
 			throw new Exception('Cannot access file: ' . $filename);
@@ -87,7 +131,19 @@ class AmazonS3 {
 		return $this->sendRequest('PUT', $this->buildURL($bucket, $s3_name), fopen($filename, 'rb'));
 	}
 
-	public function storeString($data, $bucket, $s3_name, $mime = '', $acl = self::ACL_PRIVATE, $storage = self::STORAGE_CLASS_STANDARD, $encrypt = 1) {
+	/**
+	 * Create a file on S3 on a basis of a supplied string
+	 *
+	 * @param string $date file contents
+	 * @param string $bucket bucket name
+	 * @param string $s3_name the name to assign the file on S3
+	 * @param string $mime mime type of the file
+	 * @param string $acl file access permissions
+	 * @param string $storage file storage mode
+	 * @param boolean $encrypt whether or not the file is to be stored in encrypted form
+	 * @return boolean
+	 */
+	public function storeString($data, $bucket, $s3_name, $mime = null, $acl = self::ACL_PRIVATE, $storage = self::STORAGE_CLASS_STANDARD, $encrypt = 1) {
 		$this->initStorage($storage, $encrypt, $acl);
 		$this->populateMime($mime, $data, 0);
 
@@ -96,11 +152,26 @@ class AmazonS3 {
 		return $this->sendRequest('PUT', $this->buildURL($bucket, $s3_name), $data);
 	}
 
+	/**
+	 * Retrieve a file
+	 *
+	 * @param string $name name of the file to retrieve
+	 * @param string $bucket name of the bucket where the file is located
+	 * @return false | string
+	 */
 	public function getFile($filename, $bucket) {
 		$this->cleanState();
 		return $this->sendRequest('GET', $this->buildURL($bucket, $filename));
 	}
 
+	/**
+	 * Create a new bucket
+	 *
+	 * @param string $name Bucket name
+	 * @param string $name Bucket permissions
+	 * @param region $region Region name within which the bucket should be created
+	 * @return boolean
+	 */
 	public function createBucket($name, $acl = self::ACL_PRIVATE, $region = null) {
 		$this->cleanState();
 		if ($region) {
@@ -118,11 +189,24 @@ class AmazonS3 {
 		return $this->sendRequest('PUT', $this->buildURL($name), $data);
 	}
 	
+	/**
+	 * Determine whether or not the bucket exists
+	 *
+	 * @param string $name Bucket name
+	 * @return boolean
+	 */
 	public function existsBucket($name) {
 		$this->cleanState();
 		return ($this->sendRequest('HEAD', $this->buildURL($name)) === true);
 	}
 
+	/**
+	 * Create a signature for the S3 request
+	 *
+	 * @param string $action Action being performed
+	 * @param string $resource URL of the request being executed
+	 * @return string
+	 */
 	private function authSignature($action, $resource) {
 		$key = $action . "\n";
 		if (!empty($this->headers['Content-MD5'])) {
@@ -153,6 +237,13 @@ class AmazonS3 {
 		return base64_encode(hash_hmac('sha1', $key, $this->secret_key, true));
 	}
 
+	/**
+	 * Create a URL for the S3 request
+	 *
+	 * @param string $bucket Bucket name
+	 * @param string $path Path to the file being accessed
+	 * @return string
+	 */
 	private function buildURL($bucket, $path = '') {
 		return 
 				($this->use_ssl ? 'https://' : 'http://') .
@@ -161,6 +252,14 @@ class AmazonS3 {
 				$path;
 	}
 
+	/**
+	 * Transmit a request to S3
+	 *
+	 * @param string $action Action being performed
+	 * @param string $url URL for the request being performed
+	 * @param string $data Content of the request
+	 * @return boolean | integer | string
+	 */
 	private function sendRequest($action, $url, $data = null) {
 
 		$curl = curl_init();
@@ -232,10 +331,23 @@ class AmazonS3 {
 		}
 	}
 
+	/**
+	 * Clear out state variables allowing the class to be re-used
+	 *
+	 * @return void
+	 */
 	private function cleanState() {
 		$this->errors = $this->headers = $this->amz_headers = array();
 	}
 
+	/**
+	 * Initialize the amz* headers for store requests
+	 *
+	 * @param string $storage The storage mode to use
+	 * @param boolean $encrypt Whether or not the file should be stored in encrypted mode
+	 * @param string $acl What ACL mode should be assigned to the file
+	 * @return void
+	 */
 	private function initStorage($storage, $encrypt, $acl) {
 		$this->cleanState();
 		if ($storage) {
@@ -253,6 +365,14 @@ class AmazonS3 {
 		}
 	}
 
+	/**
+	 * Populate the Content-Type header based on supplied mime-type or fileinfo with fail-over to application/octet-stream 
+	 *
+	 * @param string $mime The default mime type to use 
+	 * @param string $data The file or string of data being analyzed
+	 * @param boolean $is_file Whether not the supplied data is a file or a string
+	 * @return void
+	 */
 	private function populateMime($mime, $data, $is_file) {
 		if ($mime) {
 			$this->headers['Content-Type'] = $mime;
