@@ -59,4 +59,15 @@ class MiniS3Test extends PHPUnit_Framework_TestCase {
     $this->assertTrue($this->s3->deleteFile('abc.txt', $this->bucket_name));
     $this->assertTrue($this->s3->deleteBucket($this->bucket_name));
   }
+
+  public function testExistsFile() {
+    $this->assertTrue($this->s3->createBucket($this->bucket_name));
+    $this->assertTrue($this->s3->storeString('test 123', $this->bucket_name, 'abc.txt'));
+
+    $this->assertTrue($this->s3->existFile('abc.txt', $this->bucket_name));
+    $this->assertFalse($this->s3->existFile('nosuchfile', $this->bucket_name));
+
+    $this->assertTrue($this->s3->deleteFile('abc.txt', $this->bucket_name));
+    $this->assertTrue($this->s3->deleteBucket($this->bucket_name));
+  }
 }

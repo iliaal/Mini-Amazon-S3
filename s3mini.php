@@ -163,6 +163,18 @@ class AmazonS3 {
 		$this->cleanState();
 		return $this->sendRequest('GET', $this->buildURL($bucket, $filename));
 	}
+	
+	/**
+	 * Retrieve a file
+	 *
+	 * @param string $name name of the file to retrieve
+	 * @param string $bucket name of the bucket where the file is located
+	 * @return boolean
+	 */
+	public function existsFile($filename, $bucket) {
+		$this->cleanState();
+		return ($this->sendRequest('HEAD', $this->buildURL($bucket, $filename)) === true);
+	}
 
 	/**
 	 * Create a new bucket
